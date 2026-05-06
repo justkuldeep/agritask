@@ -10,7 +10,7 @@ import { API_BASE_URL, STORAGE_KEYS } from '../constants';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -39,20 +39,24 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    const status = error?.response?.status;
     const detail = error?.response?.data?.detail;
     let message;
     if (Array.isArray(detail)) {
-      // FastAPI validation errors: [{ loc, msg, type }]
       message = detail.map((e) => e.msg || JSON.stringify(e)).join(', ');
     } else if (typeof detail === 'string') {
       message = detail;
     } else if (detail) {
       message = JSON.stringify(detail);
+    } else if (!error?.response) {
+      // No response at all — server unreachable or request timed out
+      message = error?.code === 'ECONNABORTED'
+        ? 'Request timed out. Check your internet connection.'
+        : 'Cannot reach server. Check your internet connection.';
     } else {
       message =
         error?.response?.data?.message ||
-        error?.message ||
-        'Something went wrong';
+        `Server error (${status})`;
     }
     return Promise.reject(new Error(message));
   },
