@@ -196,11 +196,16 @@ export default function CreateTaskScreen() {
     return true;
   });
 
-  // ── Activity types filtered by selected dept/season ────────────────────────
+  // ── Activity types filtered by selected dept + season ─────────────────────
+  // Pre-Season → show Pre-Season + Always Active items for the dept
+  // Post-Season → show Post-Season + Always Active items for the dept
+  // Always (or no season) → show the full dept list
   const filteredActivityTypes = activityTypes.filter((at) => {
     if (!at.is_active) return false;
     if (form.dept && at.department && at.department.toLowerCase() !== form.dept.toLowerCase()) return false;
-    return true;
+    if (form.season === 'Pre-Season') return at.season === 'Pre-Season' || at.season === 'Always Active';
+    if (form.season === 'Post-Season') return at.season === 'Post-Season' || at.season === 'Always Active';
+    return true; // 'Always' or no season → full list
   });
 
   return (
@@ -265,17 +270,22 @@ export default function CreateTaskScreen() {
             label="Season"
             value={form.season}
             options={SEASON_OPTIONS}
-            onSelect={(v) => setField('season', v)}
+            onSelect={(v) => { setField('season', v); setField('activity_type', ''); }}
             placeholder="Select season"
           />
 
-          {/* Activity Type — from DB */}
+          {/* Activity Type — filtered by dept + season */}
           <SelectField
             label="Activity Type"
             value={form.activity_type}
             options={filteredActivityTypes.map((at) => at.name)}
             onSelect={(v) => setField('activity_type', v)}
-            placeholder={filteredActivityTypes.length === 0 ? 'Select department first' : 'Select activity type'}
+            placeholder={
+              !form.dept ? 'Select department first' :
+              !form.season ? 'Select season first' :
+              filteredActivityTypes.length === 0 ? 'No activities for this selection' :
+              'Select activity type'
+            }
             allowCustom
             customPlaceholder="Or type custom activity..."
             customValue={form.activity_type}
